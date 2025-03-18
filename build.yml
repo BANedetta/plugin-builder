@@ -1,0 +1,123 @@
+name: PocketMine-MP plugin builder
+
+on:
+  workflow_call:
+    inputs:
+      php_version:
+        description: 'PHP version'
+        required: false
+        default: '8.2'
+        type: string
+
+      use_composer:
+        description: 'Whether to install dependencies from composer.json'
+        required: true
+        type: boolean
+
+      use_virions:
+        description: 'Whether to build virions'
+        required: true
+        type: boolean
+
+    outputs:
+      artifact_url:
+        description: 'URL of the built plugin'
+        value: ${{ jobs.build.outputs.artifact_url }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Enable Phar writing
+        run: |
+          PHP_INI_PATH=$(php -i | grep 'Loaded Configuration File' | awk '{print $NF}')
+          echo "Using php.ini at: $PHP_INI_PATH"
+          echo "phar.readonly=0" >> "$PHP_INI_PATH"
+
+      - name: Download scripts from template repository
+        run: |
+          git clone --depth=1 https://github.com/Taskov1ch/pmmp-plugin-builder.git temp_repo
+          cp -r temp_repo/scripts .
+          rm -rf temp_repo
+
+      - name: Read build settings
+        id: read-settings
+        run: |
+          virions="${{ inputs.use_virions }}"
+          composer="${{ inputs.use_composer }}"
+          echo "virions=$virions" >> $GITHUB_ENV
+          echo "composer=$composer" >> $GITHUB_ENV
+
+      - name: Check for virions.yml
+        if: ${{ env.virion == 'found' && env.virions == 'true' }}
+        run: |
+          if test -f virions.yml; then
+            echo "virion=found" >> $GITHUB_ENV
+          else
+            echo "virion=not_found" >> $GITHUB_ENV
+          fi
+
+      - name: Build virions
+        if: ${{ env.virion == 'found' && env.virions == 'true' }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y unzip curl jq yq
+          mkdir -p virions
+
+          yq e '.[] | .repo + " " + .src' virions.yml | while read -r repo src; do
+            echo "Processing virion: $repo..."
+
+            repo_info=$(curl -s "https://api.github.com/repos/$repo")
+
+            if echo "$repo_info" | jq -e '.message == "Not Found"' &>/dev/null; then
+              echo "Warning: Repository $repo not found, skipping..."
+              continue
+            fi
+
+            branch=$(echo "$repo_info" | jq -r '.default_branch // "main"')
+            repo_url="https://github.com/$repo/archive/refs/heads/$branch.zip"
+
+            curl -L "$repo_url" -o repo.zip
+            unzip repo.zip -d repo && rm repo.zip
+
+            extracted_path=$(find repo -mindepth 1 -maxdepth 1 -type d | head -n 1)/"$src"
+
+            [ ! -d "$extracted_path" ] && echo "Error: Directory $src not found in $repo" >&2 && exit 1
+
+            cp scripts/virion_build.php "$extracted_path/build.php"
+            (cd "$extracted_path" && php build.php)
+
+            [ ! -f "$extracted_path/virion.phar" ] && echo "Error: virion.phar not created!" >&2 && exit 1
+
+            mv "$extracted_path/virion.phar" "virions/$(basename "$repo").phar"
+            rm -rf repo
+          done
+
+      - name: Install dependencies if composer.json exists
+        if: ${{ env.composer == 'true' }}
+        run: |
+          if test -f composer.json; then
+            composer install --no-dev --optimize-autoloader
+          else
+            echo "Warning: composer.json not found."
+          fi
+
+      - name: Build plugin
+        run: |
+          cp scripts/plugin_build.php ./build.php
+          php build.php
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin.phar
+          path: plugin.phar
