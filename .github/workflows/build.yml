@@ -19,11 +19,6 @@ on:
         required: true
         type: boolean
 
-    outputs:
-      artifact_url:
-        description: 'URL of the built plugin'
-        value: ${{ jobs.build.outputs.artifact_url }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -133,6 +128,3 @@ jobs:
       - name: Set output artifact URL
         id: set-artifact-url
         run: echo "artifact_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" >> $GITHUB_ENV
-
-    outputs:
-      artifact_url: ${{ env.artifact_url }}
