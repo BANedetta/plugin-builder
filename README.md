@@ -25,7 +25,7 @@ Before you begin, make sure you have the following tools installed:
 1. Clone the repository:
    ```sh
    git clone https://github.com/Taskov1ch/pmmp-plugin-builder.git builder
-   cd builder
+   mv builder/build.sh .
    ```
 
 2. Run the build script with the required parameters:
