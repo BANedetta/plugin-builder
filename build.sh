@@ -30,12 +30,12 @@ PHP_INI_PATH=$(php -i | grep 'Loaded Configuration File' | awk '{print $NF}')
 echo "Using php.ini: $PHP_INI_PATH"
 echo "phar.readonly=0" >> "$PHP_INI_PATH"
 
-# Clone scripts from template
+# Clone scripts from template repository
 git clone --depth=1 https://github.com/Taskov1ch/pmmp-plugin-builder.git temp_repo
 cp -r temp_repo/scripts .
 rm -rf temp_repo
 
-# Check virions.yml
+# Build virions if required and virions.yml exists
 if [[ "$USE_VIRIONS" == "true" && -f "virions.yml" ]]; then
   echo "virions.yml found, proceeding..."
 
@@ -59,7 +59,7 @@ if [[ "$USE_VIRIONS" == "true" && -f "virions.yml" ]]; then
     extracted_path=$(find repo -mindepth 1 -maxdepth 1 -type d | head -n 1)/"$src"
 
     if [ ! -d "$extracted_path" ]; then
-      echo "Error: Directory $src not found in $repo" >&2
+      echo "Error: Directory $src not found in $repo, skipping..." >&2
       rm -rf repo
       continue
     fi
@@ -68,7 +68,7 @@ if [[ "$USE_VIRIONS" == "true" && -f "virions.yml" ]]; then
     (cd "$extracted_path" && php build.php)
 
     if [ ! -f "$extracted_path/virion.phar" ]; then
-      echo "Error: virion.phar was not created!" >&2
+      echo "Error: virion.phar not created for $repo, skipping..." >&2
       rm -rf repo
       continue
     fi
@@ -80,21 +80,22 @@ else
   echo "Virions are not required or virions.yml not found."
 fi
 
-# Install dependencies via Composer
-if [[ "$USE_COMPOSER" == "true" && -f "composer.json" ]]; then
-  composer install --no-dev --optimize-autoloader
-else
-  echo "Warning: composer.json not found or Composer is disabled."
+# Install dependencies via Composer if required
+if [[ "$USE_COMPOSER" == "true" ]]; then
+  if [[ -f "composer.json" ]]; then
+    composer install --no-dev --optimize-autoloader
+  else
+    echo "Warning: composer.json not found."
+  fi
 fi
 
 # Build the plugin
 cp scripts/plugin_build.php ./build.php
 php build.php
 
-# Move the result
+# Verify plugin.phar exists
 if [ -f "plugin.phar" ]; then
-  mv plugin.phar build_output/
-  echo "Build completed. File plugin.phar moved to build_output/"
+  echo "Build completed. plugin.phar created."
 else
   echo "Error: plugin.phar was not created!" >&2
   exit 1
