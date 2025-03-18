@@ -124,7 +124,3 @@ jobs:
         with:
           name: plugin.phar
           path: plugin.phar
-
-      - name: Set output artifact URL
-        id: set-artifact-url
-        run: echo "artifact_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" >> $GITHUB_ENV
