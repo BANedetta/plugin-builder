@@ -25,19 +25,19 @@ Before you begin, make sure you have the following tools installed:
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/your-repo.git
-   cd your-repo
+   git clone https://github.com/Taskov1ch/pmmp-plugin-builder.git builder
+   cd builder
    ```
 
 2. Run the build script with the required parameters:
    ```sh
    chmod +x build.sh
-   ./build.sh -c true -v true
+   ./build.sh -c -v
    ```
 
    Options:
-   - `-c true` — use Composer to install dependencies
-   - `-v true` — build virions if `virions.yml` is present
+   - `-c` — use Composer to install dependencies
+   - `-v` — build virions if `virions.yml` is present
 
 3. After successful execution, the `plugin.phar` file will be created, ready for use on the server.
 
