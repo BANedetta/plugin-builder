@@ -35,14 +35,12 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: ${{ inputs.php_version }}
           tools: composer
 
       - name: Enable Phar writing
         run: |
-          PHP_INI_PATH=$(php -i | grep 'Loaded Configuration File' | awk '{print $NF}')
-          echo "Using php.ini at: $PHP_INI_PATH"
-          echo "phar.readonly=0" >> "$PHP_INI_PATH"
+          echo "phar.readonly=0" >> ~/.phpenv/versions/$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")/etc/conf.d/custom.ini
 
       - name: Download scripts from template repository
         run: |
@@ -51,24 +49,21 @@ jobs:
           rm -rf temp_repo
 
       - name: Read build settings
-        id: read-settings
         run: |
-          virions="${{ inputs.use_virions }}"
-          composer="${{ inputs.use_composer }}"
-          echo "virions=$virions" >> $GITHUB_ENV
-          echo "composer=$composer" >> $GITHUB_ENV
+          echo "USE_VIRIONS=${{ inputs.use_virions }}" >> $GITHUB_ENV
+          echo "USE_COMPOSER=${{ inputs.use_composer }}" >> $GITHUB_ENV
 
       - name: Check for virions.yml
-        if: ${{ env.virion == 'found' && env.virions == 'true' }}
+        id: check-virions
         run: |
-          if test -f virions.yml; then
-            echo "virion=found" >> $GITHUB_ENV
+          if [[ -f virions.yml ]]; then
+            echo "VIRION_FOUND=true" >> $GITHUB_ENV
           else
-            echo "virion=not_found" >> $GITHUB_ENV
+            echo "VIRION_FOUND=false" >> $GITHUB_ENV
           fi
 
       - name: Build virions
-        if: ${{ env.virion == 'found' && env.virions == 'true' }}
+        if: env.VIRION_FOUND == 'true' && env.USE_VIRIONS == 'true'
         run: |
           sudo apt-get update && sudo apt-get install -y unzip curl jq yq
           mkdir -p virions
@@ -91,24 +86,28 @@ jobs:
 
             extracted_path=$(find repo -mindepth 1 -maxdepth 1 -type d | head -n 1)/"$src"
 
-            [ ! -d "$extracted_path" ] && echo "Error: Directory $src not found in $repo" >&2 && exit 1
+            if [ ! -d "$extracted_path" ]; then
+              echo "Error: Directory $src not found in $repo, skipping..."
+              continue
+            fi
 
             cp scripts/virion_build.php "$extracted_path/build.php"
             (cd "$extracted_path" && php build.php)
 
-            [ ! -f "$extracted_path/virion.phar" ] && echo "Error: virion.phar not created!" >&2 && exit 1
+            if [ ! -f "$extracted_path/virion.phar" ]; then
+              echo "Error: virion.phar not created for $repo, skipping..."
+              continue
+            fi
 
             mv "$extracted_path/virion.phar" "virions/$(basename "$repo").phar"
             rm -rf repo
           done
 
       - name: Install dependencies if composer.json exists
-        if: ${{ env.composer == 'true' }}
+        if: env.USE_COMPOSER == 'true'
         run: |
-          if test -f composer.json; then
+          if [[ -f composer.json ]]; then
             composer install --no-dev --optimize-autoloader
-          else
-            echo "Warning: composer.json not found."
           fi
 
       - name: Build plugin
@@ -116,8 +115,22 @@ jobs:
           cp scripts/plugin_build.php ./build.php
           php build.php
 
+      - name: Verify plugin.phar exists
+        run: |
+          if [[ ! -f plugin.phar ]]; then
+            echo "Error: plugin.phar not found!"
+            exit 1
+          fi
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: plugin.phar
           path: plugin.phar
+
+      - name: Set output artifact URL
+        id: set-artifact-url
+        run: echo "artifact_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" >> $GITHUB_ENV
+
+    outputs:
+      artifact_url: ${{ env.artifact_url }}
