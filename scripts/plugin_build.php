@@ -3,7 +3,7 @@
 $srcPath = __DIR__ . "/src";
 $phar = new Phar(__DIR__ . "/plugin.phar", 0, "plugin.phar");
 
-$phar->buildFromDirectory(__DIR__, '/^(?!.*(scripts|build\.php)).*$/');
+$phar->buildFromDirectory(__DIR__, '/^(?!.*(builder|scripts|build\.php)).*$/');
 
 $autoloadCode = <<<'PHP'
 <?php
