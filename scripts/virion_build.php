@@ -6,7 +6,18 @@ $phar = new Phar(__DIR__ . "/virion.phar", 0, "virion.phar");
 
 $phar->buildFromDirectory(__DIR__, '/^(?!.*(build\.php)).*$/');
 
-$autoloadCode = file_get_contents(__DIR__ . "/virion_autoload.php");
+$autoloadCode = <<<'PHP'
+<?php
+
+spl_autoload_register(function ($class) {
+	$classPath = str_replace("\\", "/", $class) . ".php";
+	$file = "phar://virion.phar/" . $classPath;
+
+	if (file_exists($file)) {
+		require_once $file;
+	}
+});
+PHP;
 
 $phar->addFromString("autoload.php", $autoloadCode);
 

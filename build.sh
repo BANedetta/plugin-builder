@@ -88,15 +88,15 @@ else
 fi
 
 # Install dependencies via Composer if required
-if [[ "$USE_COMPOSER" == "true" ]]; then
-	if [[ -f "composer.json" ]]; then
-		composer install --no-dev --optimize-autoloader
-	else
-		echo -e "${YELLOW}Warning: composer.json not found.${NC}"
-	fi
+if [[ "$USE_COMPOSER" == "true" && -f "composer.json" ]]; then
+	echo -e "${BLUE}composer.json found, proceeding...${NC}"
+	composer install --no-dev --optimize-autoloader
+else
+	echo -e "${YELLOW}Composer are not required or composer.json not found.${NC}"
 fi
 
 # Build the plugin
+echo -e "${BLUE}Plugin building...${NC}"
 cp scripts/plugin_build.php ./build.php
 php build.php
 

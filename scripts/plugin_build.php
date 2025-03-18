@@ -5,7 +5,19 @@ $phar = new Phar(__DIR__ . "/plugin.phar", 0, "plugin.phar");
 
 $phar->buildFromDirectory(__DIR__, '/^(?!.*(scripts|build\.php)).*$/');
 
-$autoloadCode = file_get_contents(__DIR__ . "/plugin_autoload.php");
+$autoloadCode = <<<'PHP'
+<?php
+
+foreach (glob(__DIR__ . "/virions/*.phar") as $pharFile) {
+	include_once "phar://" . $pharFile . "/autoload.php";
+}
+
+$vendorAutoload = __DIR__ . "/vendor/autoload.php";
+
+if (file_exists($vendorAutoload)) {
+	require_once $vendorAutoload;
+}
+PHP;
 
 $phar->addFromString("autoload.php", $autoloadCode);
 
