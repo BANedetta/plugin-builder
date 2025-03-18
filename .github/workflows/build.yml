@@ -40,7 +40,9 @@ jobs:
 
       - name: Enable Phar writing
         run: |
-          echo "phar.readonly=0" >> ~/.phpenv/versions/$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")/etc/conf.d/custom.ini
+          PHP_INI_PATH=$(php -i | grep 'Loaded Configuration File' | awk '{print $NF}')
+          echo "Using php.ini at: $PHP_INI_PATH"
+          echo "phar.readonly=0" >> "$PHP_INI_PATH"
 
       - name: Download scripts from template repository
         run: |
