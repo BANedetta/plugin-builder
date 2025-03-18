@@ -1,4 +1,3 @@
-```
 # PocketMine-MP Plugin Builder
 
 This repository provides an automated tool for building PocketMine-MP plugins in `.phar` format. It includes support for automatic dependency installation via `Composer` and `virions` compilation if a `virions.yml` file is present.
@@ -73,4 +72,3 @@ After each commit to the repository, the plugin will be automatically built and 
 
 ## Conclusion
 This tool simplifies the process of building PocketMine-MP plugins by eliminating the need for manual dependency installation and `virions` compilation. Just configure `virions.yml`, add `composer.json`, and your plugin will be ready for use with minimal effort.
-```
