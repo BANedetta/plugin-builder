@@ -4,7 +4,6 @@ $stub = <<<'STUB'
 <?php
 
 Phar::mapPhar("plugin.phar");
-require_once "phar://plugin.phar/autoload.php";
 __HALT_COMPILER();
 STUB;
 

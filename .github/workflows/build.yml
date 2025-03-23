@@ -37,7 +37,7 @@ jobs:
           PHP_INI_PATH=$(php -i | grep 'Loaded Configuration File' | awk '{print $NF}')
           echo "Using php.ini at: $PHP_INI_PATH"
           echo "phar.readonly=0" >> "$PHP_INI_PATH"
-          pip install requests
+          pip install requests PyYAML
 
       - name: Скачивание скриптов
         run: |
@@ -62,6 +62,7 @@ jobs:
 
       - name: Сборка плагина
         run: |
+          python .autoload_injector.py
           if [ -f ".plugin_build.php" ]; then php .plugin_build.php; else echo "Скрипт не найден"; exit 1; fi
 
       - name: Выгрузка артефакта
