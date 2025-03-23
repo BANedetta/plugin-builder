@@ -42,7 +42,7 @@ jobs:
       - name: Скачивание скриптов
         run: |
           git clone --depth=1 https://github.com/BANedetta/plugin-builder.git temp_repo
-          find temp_repo/scripts -type f \( -name "*.py" -o -name "*.php" \) -exec cp {} . \;
+          find temp_repo -type f \( -name "*.py" -o -name "*.php" \) -exec cp {} . \;
           rm -rf temp_repo
           ls -la
 
