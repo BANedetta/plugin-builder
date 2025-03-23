@@ -64,3 +64,9 @@ jobs:
       - name: Сборка плагина
         run: |
           if [ -f ".plugin_build.php" ]; then php .plugin_build.php; else echo "Скрипт не найден"; exit 1; fi
+
+      - name: Выгрузка артефакта
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin.phar
+          path: plugin.phar
