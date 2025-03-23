@@ -68,7 +68,6 @@ $pluginPath = __DIR__;
 $autoloadPath = "autoload.php";
 $threadClasses = ["Thread", "AsyncTask"];
 $ignorePaths = ["vendor"];
-$extraUp = ["virions" => 1, "src" => 1];
 
 $phpFiles = getPhpFiles($pluginPath);
 echo "🔍 Найдено " . count($phpFiles) . " PHP файлов.\n";
@@ -82,8 +81,7 @@ foreach ($phpFiles as $file) {
 		}
 
 		$namespaceParts = explode("\\", $classData["full_class"]);
-		$extraUpLevels = array_sum(array_intersect_key($extraUp, array_flip(explode(DIRECTORY_SEPARATOR, $file))));
-		$levelsUp = count($namespaceParts) + $extraUpLevels;
+		$levelsUp = count($namespaceParts) + 1;
 		$relativeAutoloadPath = str_repeat("../", (int) $levelsUp) . $autoloadPath;
 
 		modifyOnRunMethod($file, $relativeAutoloadPath);

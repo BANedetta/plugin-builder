@@ -14,10 +14,6 @@ THREAD_CLASSES = [
 IGNORE_PATHES = [
 	"vendor"
 ]
-EXTRA_UP = {
-	"virions": 1,
-	"src": 1
-}
 
 def get_php_files(directory: Path):
 	"""Получает список всех PHP файлов в указанной директории."""
@@ -90,9 +86,7 @@ for file in php_files:
 		namespace_parts = class_data["full_class"].split("\\")
 
 		# Вычисляем дополнительные уровни up на основе всех папок из EXTRA_UP
-		extra_up = sum(EXTRA_UP.get(part, 0) for part in file.parts)
-
-		levels_up = len(namespace_parts) + extra_up
+		levels_up = len(namespace_parts) + 1
 		autoload_path = ("../" * levels_up) + AUTOLOAD_PATH
 
 		modify_on_run_method(file, autoload_path)
