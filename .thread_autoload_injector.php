@@ -68,7 +68,7 @@ $pluginPath = __DIR__;
 $autoloadPath = "autoload.php";
 $threadClasses = ["Thread", "AsyncTask"];
 $ignorePaths = ["vendor"];
-$extraUp = ["virions" => 1];
+$extraUp = ["virions" => 1, "src" => 1];
 
 $phpFiles = getPhpFiles($pluginPath);
 echo "🔍 Найдено " . count($phpFiles) . " PHP файлов.\n";

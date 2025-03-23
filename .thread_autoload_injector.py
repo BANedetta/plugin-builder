@@ -15,7 +15,8 @@ IGNORE_PATHES = [
 	"vendor"
 ]
 EXTRA_UP = {
-	"virions": 1
+	"virions": 1,
+	"src": 1
 }
 
 def get_php_files(directory: Path):
