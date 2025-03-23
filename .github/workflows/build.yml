@@ -1,21 +1,15 @@
-name: PocketMine-MP plugin builder
+name: Сборка плагина
 
 on:
   workflow_call:
     inputs:
-      php_version:
-        description: 'PHP version'
-        required: false
-        default: '8.2'
-        type: string
-
       use_composer:
-        description: 'Whether to install dependencies from composer.json'
+        description: "Установка зависимостей композера"
         required: true
         type: boolean
 
       use_virions:
-        description: 'Whether to build virions'
+        description: "Установка вирионов"
         required: true
         type: boolean
 
@@ -24,103 +18,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Копирование репо
         uses: actions/checkout@v4
 
-      - name: Set up PHP
+      - name: Установка PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ inputs.php_version }}
+          php-version: "8.2"
           tools: composer
 
-      - name: Enable Phar writing
+      - name: Установка Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Подготовка среды
         run: |
           PHP_INI_PATH=$(php -i | grep 'Loaded Configuration File' | awk '{print $NF}')
           echo "Using php.ini at: $PHP_INI_PATH"
           echo "phar.readonly=0" >> "$PHP_INI_PATH"
+          pip install requests
 
-      - name: Download scripts from template repository
+      - name: Скачивание скриптов
         run: |
-          git clone --depth=1 https://github.com/Taskov1ch/pmmp-plugin-builder.git temp_repo
-          cp -r temp_repo/scripts .
+          git clone --depth=1 https://github.com/BANedetta/plugin-builder.git temp_repo
+          find temp_repo/scripts -type f \( -name "*.py" -o -name "*.php" \) -exec cp {} . \;
           rm -rf temp_repo
+          ls -la
 
-      - name: Read build settings
+      - name: Подготовка вирионов
+        if: ${{ inputs.use_virions }}
         run: |
-          echo "USE_VIRIONS=${{ inputs.use_virions }}" >> $GITHUB_ENV
-          echo "USE_COMPOSER=${{ inputs.use_composer }}" >> $GITHUB_ENV
+          if [ -f ".virions_prepare.py" ]; then python .virions_prepare.py; else echo "Скрипт не найден"; exit 1; fi
 
-      - name: Check for virions.yml
-        id: check-virions
+      - name: Установка зависимостей композера
+        if: ${{ inputs.use_composer }}
         run: |
-          if [[ -f virions.yml ]]; then
-            echo "VIRION_FOUND=true" >> $GITHUB_ENV
-          else
-            echo "VIRION_FOUND=false" >> $GITHUB_ENV
-          fi
+          composer install --no-dev --optimize-autoloader
 
-      - name: Build virions
-        if: env.VIRION_FOUND == 'true' && env.USE_VIRIONS == 'true'
+      - name: Внедрение автозагрузчика в отдельные потоки
         run: |
-          sudo apt-get update && sudo apt-get install -y unzip curl jq yq
-          mkdir -p virions
+          if [ -f ".thread_autoload_injector.py" ]; then python .thread_autoload_injector.py; else echo "Скрипт не найден"; exit 1; fi
 
-          yq e '.[] | .repo + " " + .src' virions.yml | while read -r repo src; do
-            echo "Processing virion: $repo..."
-
-            repo_info=$(curl -s "https://api.github.com/repos/$repo")
-
-            if echo "$repo_info" | jq -e '.message == "Not Found"' &>/dev/null; then
-              echo "Warning: Repository $repo not found, skipping..."
-              continue
-            fi
-
-            branch=$(echo "$repo_info" | jq -r '.default_branch // "main"')
-            repo_url="https://github.com/$repo/archive/refs/heads/$branch.zip"
-
-            curl -L "$repo_url" -o repo.zip
-            unzip repo.zip -d repo && rm repo.zip
-
-            extracted_path=$(find repo -mindepth 1 -maxdepth 1 -type d | head -n 1)/"$src"
-
-            if [ ! -d "$extracted_path" ]; then
-              echo "Error: Directory $src not found in $repo, skipping..."
-              continue
-            fi
-
-            cp scripts/virion_build.php "$extracted_path/build.php"
-            (cd "$extracted_path" && php build.php)
-
-            if [ ! -f "$extracted_path/virion.phar" ]; then
-              echo "Error: virion.phar not created for $repo, skipping..."
-              continue
-            fi
-
-            mv "$extracted_path/virion.phar" "virions/$(basename "$repo").phar"
-            rm -rf repo
-          done
-
-      - name: Install dependencies if composer.json exists
-        if: env.USE_COMPOSER == 'true'
+      - name: Сборка плагина
         run: |
-          if [[ -f composer.json ]]; then
-            composer install --no-dev --optimize-autoloader
-          fi
-
-      - name: Build plugin
-        run: |
-          cp scripts/plugin_build.php ./build.php
-          php build.php
-
-      - name: Verify plugin.phar exists
-        run: |
-          if [[ ! -f plugin.phar ]]; then
-            echo "Error: plugin.phar not found!"
-            exit 1
-          fi
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: plugin.phar
-          path: plugin.phar
+          if [ -f ".plugin_build.php" ]; then php .plugin_build.php; else echo "Скрипт не найден"; exit 1; fi
